@@ -4,6 +4,7 @@ const express = require('express');
 // Initializing the express framework and saving it into another constant called app
 const app = express();
 const port = 3000;
+const postgreSQLDB = require('../db/postgreSQL.js');
 
 // basic middleware
 app.use(express.json());
