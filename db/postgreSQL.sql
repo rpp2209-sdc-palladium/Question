@@ -1,5 +1,5 @@
 -- Create the databases
-CREATE DATABASE questionsAndAnswers;
+-- CREATE DATABASE qa;
 
 -- Create 3 tables, question/answer/photos
 -- CREATE TABLE IF NOT EXISTS question(
