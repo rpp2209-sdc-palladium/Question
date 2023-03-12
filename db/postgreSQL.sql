@@ -1,5 +1,5 @@
 -- Create the databases
--- CREATE DATABASE qa;
+CREATE DATABASE qa;
 
 -- Create 3 tables, question/answer/photos
 -- CREATE TABLE IF NOT EXISTS question(
@@ -19,11 +19,13 @@
 --   answer_date TEXT,
 --   answerer_name TEXT,
 --   answer_helpfulness INT,
---   question_id INT
+--   question_id INT,
+--   CONSTRAINT fk_question FOREIGN KEY (question_id) REFERENCES question(question_id) ON DELETE CASCADE
 -- );
 
 -- CREATE TABLE IF NOT EXISTS photos(
 --   photo_id INT PRIMARY KEY,
 --   url TEXT,
 --   answer_id INT
+--   CONSTRAINT fk_answer FOREIGN KEY (answer_id) REFERENCES answer(answer_id) ON DELETE CASCADE
 -- );

@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost:3000');
+mongoose.connect('mongodb://localhost/SDC');
+
 
 // Define the questionsAndAnswers schema
-const questionsMongoSchema = new mongoose.Schema({
+let questionsMongoSchema = mongoose.Schema({
   product_id: Number,
   results: [{
     question_id: Number,
@@ -30,4 +31,4 @@ const questionsMongoSchema = new mongoose.Schema({
   }]
 });
 
-const questions = mongoose.model('Questions', questionsMongoSchema);
+let Questions = mongoose.model('Questions', questionsMongoSchema);

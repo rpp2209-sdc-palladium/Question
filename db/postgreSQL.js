@@ -15,38 +15,40 @@ const connectDb = async () => {
     await client.connect()
 
     // Create the database
-      // do it in the terminal
-      // Then switch to the database called 'qa'
+    // do it in the terminal
+    // Then switch to the database called 'qa'
 
     // Create table question
     await client.query('CREATE TABLE IF NOT EXISTS question(\
       question_id INT PRIMARY KEY,\
+      product_id INT,\
       question_body TEXT,\
       question_date TEXT,\
-      asker_email TEXT,\
       asker_name TEXT,\
-      question_helpfulness INT,\
+      asker_email TEXT,\
       reported BOOLEAN,\
-      product_id INT\
+      question_helpfulness INT\
     )');
 
     // Create table answer
     await client.query('CREATE TABLE IF NOT EXISTS answer(\
       answer_id INT PRIMARY KEY,\
+      question_id INT,\
       answer_body TEXT,\
       answer_date TEXT,\
       answerer_name TEXT,\
       answerer_email TEXT,\
+      reported BOOLEAN,\
       answer_helpfulness INT,\
-      reported BOOLEAN, \
-      question_id INT\
+      CONSTRAINT fk_question FOREIGN KEY (question_id) REFERENCES question(question_id) ON DELETE CASCADE\
     )');
 
     // Create table photos
     await client.query('CREATE TABLE IF NOT EXISTS photos(\
       photo_id INT PRIMARY KEY,\
+      answer_id INT,\
       url TEXT,\
-      answer_id INT\
+      CONSTRAINT fk_answer FOREIGN KEY (answer_id) REFERENCES answer(answer_id) ON DELETE CASCADE\
     )');
 
     console.log('Connected to PostgreSQL');
