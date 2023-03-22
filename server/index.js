@@ -5,7 +5,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 const app = express();
-const port = 3000;
+const port = 8080;
 // Import the database
 const db = require('../db/postgreSQL.js').client;
 
@@ -27,7 +27,7 @@ app.get('/qa/questions', (req, res) => {
   // res.send('Retrieve a list of questions');
   var product_id = req.query.product_id;
   var page = req.query.page || 1;
-  var count = req.query.count || 5;
+  var count = req.query.count || 16;
   var queryString =
     `
   /* Filtered the rows that have the specific product_id, and name the new table as 'q' */
@@ -102,7 +102,7 @@ app.get('/qa/questions/:question_id/answers', (req, res) => {
   // res.send('Returns answers for a given question');
   var question_id = req.params.question_id;
   var page = req.query.page || 1;
-  var count = req.query.count || 5;
+  var count = req.query.count || 16;
   var queryString = `
     WITH a AS (
       SELECT answer_id, answer_body as body, answer_date as date, answerer_name, answerer_email, reported, answer_helpfulness as helpfulness
@@ -277,3 +277,5 @@ app.put('/qa/answers/:answer_id/report', (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 })
+
+module.exports = app;
