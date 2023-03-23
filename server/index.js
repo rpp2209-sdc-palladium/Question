@@ -5,7 +5,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 const app = express();
-const port = 3000;
+const port = 8080;
 // Import the database
 const db = require('../db/postgreSQL.js').client;
 
@@ -20,14 +20,14 @@ app.get('/', (req, res) => {
 
 // Retrieves a list of questions for a particular product. This list does not include any reported questions.
 // Parameters:
-  // product_id: Specifies the product for which to retrieve questions.
-  // page: Selects the page of results to return. Default 1.
-  // count: Specifies how many results per page to return. Default 5.
+// product_id: Specifies the product for which to retrieve questions.
+// page: Selects the page of results to return. Default 1.
+// count: Specifies how many results per page to return. Default 5.
 app.get('/qa/questions', (req, res) => {
   // res.send('Retrieve a list of questions');
   var product_id = req.query.product_id;
   var page = req.query.page || 1;
-  var count = req.query.count || 5;
+  var count = req.query.count || 16;
   var queryString =
     `
   /* Filtered the rows that have the specific product_id, and name the new table as 'q' */
@@ -94,15 +94,15 @@ app.get('/qa/questions', (req, res) => {
 
 // Returns answers for a given question_id
 // Parameters:
-  // product_id: Specifies the product for which to retrieve questions. This list does not include any reported answers.
+// product_id: Specifies the product for which to retrieve questions. This list does not include any reported answers.
 // Query parameters
-  // page: Selects the page of results to return. Default 1.
-  // count: Specifies how many results per page to return. Default 5.
+// page: Selects the page of results to return. Default 1.
+// count: Specifies how many results per page to return. Default 5.
 app.get('/qa/questions/:question_id/answers', (req, res) => {
   // res.send('Returns answers for a given question');
   var question_id = req.params.question_id;
   var page = req.query.page || 1;
-  var count = req.query.count || 5;
+  var count = req.query.count || 16;
   var queryString = `
     WITH a AS (
       SELECT answer_id, answer_body as body, answer_date as date, answerer_name, answerer_email, reported, answer_helpfulness as helpfulness
@@ -147,13 +147,24 @@ app.post('/qa/questions', (req, res) => {
   var name = req.body.name;
   var email = req.body.email;
   var product_id = req.body.product_id;
-  var queryString = `INSERT INTO question (question_body, asker_name, asker_email, product_id) VALUES ($1, $2, $3, $4)`;
+  var reported = false;
+  var helpfulness = 0;
+  const currentDate = new Date();
+  const dateString = currentDate.toISOString();
+  var queryString = `INSERT INTO question (question_id, question_body, asker_name, asker_email, product_id, question_date, reported, question_helpfulness) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
 
-  db.query(queryString, [body, name, email, product_id], (err, result) => {
+  // Find the max question_id at first
+  db.query(`SELECT MAX(question_id) as max_question_id from question`, (err, result) => {
     if (err) {
-      res.status(404).send('Error occurs once post the question' + err);
+      res.status(404).send('Error occurs once find the max question_id');
     } else {
-      res.sendstatus(201);
+      var newMaxQuestionID = result.rows[0].max_question_id + 1; // Increase the max answer_id by 1
+      db.query(queryString, [newMaxQuestionID, body, name, email, product_id, dateString, reported, helpfulness], (err, result) => {
+        if (err) {
+          res.status(404).send('Error occurs once post the question' + err);
+        }
+      });
+      res.status(201).send('Created a queston!');
     }
   });
 })
@@ -163,11 +174,15 @@ app.post('/qa/questions', (req, res) => {
 // Body parameters: body, name, email, photos
 app.post('/qa/questions/:question_id/answers', (req, res) => {
   // res.send('Add an answer');
-  var question_id = req.params.question_id;
+  var question_id = req.body.question_id;
   var body = req.body.body;
   var name = req.body.name;
   var email = req.body.email;
-  var queryAnswerString = `INSERT INTO answer (answer_id, answer_body, answerer_name, answerer_email, question_id) VALUES ($1, $2, $3, $4, $5)`;
+  var reported = false;
+  var helpfulness = req.body.helpfulness || 0;
+  const currentDate = new Date();
+  const dateString = currentDate.toISOString();
+  var queryAnswerString = `INSERT INTO answer (answer_id, answer_body, answerer_name, answerer_email, question_id, reported, answer_helpfulness, answer_date) VALUES ($1, $2, $3, $4, $5, $6,$7,$8)`;
 
   // Find the max answer id at first
   db.query(`SELECT MAX(answer_id) as max_answer_id from answer`, (err, result) => {
@@ -176,13 +191,13 @@ app.post('/qa/questions/:question_id/answers', (req, res) => {
     } else {
       var newMaxAnswerID = result.rows[0].max_answer_id + 1; // Increase the max answer_id by 1
       // Once user trys to add a answer, insert a new rows for answer table
-      db.query(queryAnswerString, [newMaxAnswerID, body, name, email, question_id], (err, result) => {
+      db.query(queryAnswerString, [newMaxAnswerID, body, name, email, question_id, reported, helpfulness, dateString], (err, result) => {
         if (err) {
           res.status(404).send('Error occurs once add the answer' + err);
         } else {
           // Add a new row(s) for photos table
           var photos = req.body.photos;
-          if (photos.length > 0) {
+          if (photos !== undefined && photos.length > 0) {
             var newPhotoID = 1;
             for (var i = 0; i < photos.length; i++) {
               var eachPhotoUrl = photos[i];
@@ -195,9 +210,9 @@ app.post('/qa/questions/:question_id/answers', (req, res) => {
               newPhotoID++;
             }
           }
-          res.sendStatus(204);
         }
       });
+      res.status(201).send('Created an answer!');
     }
   });
 })
@@ -207,7 +222,7 @@ app.post('/qa/questions/:question_id/answers', (req, res) => {
 // Parameters
 // question_id
 app.put('/qa/questions/:question_id/helpful', (req, res) => {
-  var question_id = req.params.question_id;
+  var question_id = req.body.question_id;
   // res.send('Mark question as helpful');
   var queryString = `UPDATE question SET question_helpfulness = question_helpfulness + 1 WHERE question_id = ${question_id}`;
 
@@ -224,16 +239,17 @@ app.put('/qa/questions/:question_id/helpful', (req, res) => {
 // Updates a question to show it was reported. Note, this action does not delete the question, but the question will not be returned in the above GET request.
 // Parameters
 // question_id
-app.put('/qa/questions/:question_id/report', (req, res) => {
+app.put(`/qa/questions/:question_id/report`, (req, res) => {
   // res.send('Report question');
-  var question_id = req.params.question_id;
-  var queryString = `UPDATE question SET reported = TRUE WHERE question_id = ${question_id}`;
+  var question_id = req.body.question_id;
+  console.log('orange', question_id);
+  var queryString = `UPDATE question SET reported = true WHERE question_id = ${question_id}`;
 
   db.query(queryString, (err, result) => {
     if (err) {
       res.status(404).send('Error occurs once report the question' + err);
     } else {
-      res.sendStatus(204);
+      res.status(204).send('Report question');
     }
   });
 })
@@ -244,7 +260,7 @@ app.put('/qa/questions/:question_id/report', (req, res) => {
 // answer_id
 app.put('/qa/answers/:answer_id/helpful', (req, res) => {
   // res.send('Mark answers as helpful');
-  var answer_id = req.params.answer_id;
+  var answer_id = req.body.answer_id;
   var queryString = `UPDATE answer SET answer_helpfulness = answer_helpfulness + 1 WHERE answer_id = ${answer_id}`;
 
   db.query(queryString, (err, result) => {
@@ -262,8 +278,8 @@ app.put('/qa/answers/:answer_id/helpful', (req, res) => {
 // answer_id
 app.put('/qa/answers/:answer_id/report', (req, res) => {
   // res.send('Report the answer');
-  var answer_id = req.params.answer_id;
-  var queryString = `UPDATE answer SET reported = TRUE WHERE answer_id = ${answer_id}`;
+  var answer_id = req.body.answer_id;
+  var queryString = `UPDATE answer SET reported = true WHERE answer_id = ${answer_id}`;
 
   db.query(queryString, (err, result) => {
     if (err) {
@@ -277,3 +293,5 @@ app.put('/qa/answers/:answer_id/report', (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 })
+
+module.exports = app;
