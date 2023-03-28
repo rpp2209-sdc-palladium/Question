@@ -36,12 +36,18 @@ app.get('/qa/questions', (req, res) => {
       FROM question
       WHERE product_id = ${product_id} AND reported = FALSE
     ),
+    a AS (
+      SELECT *
+      FROM q
+      LEFT JOIN answer ON q.question_id = answer.question_id
+    ),
     /* Set up the frame for photos, such as answer_id(ex: 5): [{photo_id: 1, url: 'test1'}, {photo_id:2, url: 'test2'}], and name the new table as 'p' */
     p AS (
       SELECT
         answer_id,
         array_agg(json_build_object('id', photo_id, 'url', url)) as all_photos
       FROM photos
+      WHERE answer_id IN (SELECT answer_id from a)
       GROUP BY
         answer_id
     )
@@ -114,6 +120,7 @@ app.get('/qa/questions/:question_id/answers', (req, res) => {
         answer_id,
         array_agg(json_build_object('id', photo_id, 'url', url)) as all_photos
       FROM photos
+      WHERE answer_id IN (SELECT answer_id FROM a)
       GROUP BY
         answer_id
     )
