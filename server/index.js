@@ -124,13 +124,7 @@ app.get('/qa/questions/:question_id/answers', (req, res) => {
       GROUP BY
         answer_id
     )
-    SELECT a.*,
-      CASE
-        WHEN p.all_photos IS NULL
-        THEN '{}'
-        ELSE
-          p.all_photos
-      END AS photos
+    SELECT a.*, COALESCE(p.all_photos, '{}') as photos
     FROM a
     LEFT JOIN p on p.answer_id = a.answer_id
   `;
@@ -169,9 +163,11 @@ app.post('/qa/questions', (req, res) => {
       db.query(queryString, [newMaxQuestionID, body, name, email, product_id, dateString, reported, helpfulness], (err, result) => {
         if (err) {
           res.status(404).send('Error occurs once post the question' + err);
+        } else {
+          res.status(201).send('Created a queston!');
         }
       });
-      res.status(201).send('Created a queston!');
+      // res.status(201).send('Created a queston!');
     }
   });
 })
@@ -212,14 +208,18 @@ app.post('/qa/questions/:question_id/answers', (req, res) => {
               db.query(queryPhotoString, [newMaxAnswerID, newPhotoID, eachPhotoUrl], (err, result) => {
                 if (err) {
                   res.status(404).send('Error occurs once add the photos' + err);
+                } else {
+                  res.status(201).send('Inserted the photo!');
                 }
               });
               newPhotoID++;
             }
+          } else {
+            res.status(201).send('Create an answer!');
           }
         }
       });
-      res.status(201).send('Created an answer!');
+      // res.status(201).send('Created an answer!');
     }
   });
 })
@@ -229,7 +229,7 @@ app.post('/qa/questions/:question_id/answers', (req, res) => {
 // Parameters
 // question_id
 app.put('/qa/questions/:question_id/helpful', (req, res) => {
-  var question_id = req.body.question_id;
+  var question_id = req.params.question_id;
   // res.send('Mark question as helpful');
   var queryString = `UPDATE question SET question_helpfulness = question_helpfulness + 1 WHERE question_id = ${question_id}`;
 
@@ -248,8 +248,7 @@ app.put('/qa/questions/:question_id/helpful', (req, res) => {
 // question_id
 app.put(`/qa/questions/:question_id/report`, (req, res) => {
   // res.send('Report question');
-  var question_id = req.body.question_id;
-  console.log('orange', question_id);
+  var question_id = req.params.question_id;
   var queryString = `UPDATE question SET reported = true WHERE question_id = ${question_id}`;
 
   db.query(queryString, (err, result) => {
@@ -267,7 +266,7 @@ app.put(`/qa/questions/:question_id/report`, (req, res) => {
 // answer_id
 app.put('/qa/answers/:answer_id/helpful', (req, res) => {
   // res.send('Mark answers as helpful');
-  var answer_id = req.body.answer_id;
+  var answer_id = req.params.answer_id;
   var queryString = `UPDATE answer SET answer_helpfulness = answer_helpfulness + 1 WHERE answer_id = ${answer_id}`;
 
   db.query(queryString, (err, result) => {
@@ -285,7 +284,7 @@ app.put('/qa/answers/:answer_id/helpful', (req, res) => {
 // answer_id
 app.put('/qa/answers/:answer_id/report', (req, res) => {
   // res.send('Report the answer');
-  var answer_id = req.body.answer_id;
+  var answer_id = req.params.answer_id;
   var queryString = `UPDATE answer SET reported = true WHERE answer_id = ${answer_id}`;
 
   db.query(queryString, (err, result) => {
